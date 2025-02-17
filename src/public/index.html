@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Supabase Compliance Checker</title>
+</head>
+<body>
+    <h1>Supabase Compliance Checker</h1>
+    
+    <div id="auth-section">
+        <a href="/auth/login">
+            <button>Connect to Supabase</button>
+        </a>
+    </div>
+
+    <div id="results-section" style="display: none;">
+        <h2>Compliance Results</h2>
+        <pre id="results"></pre>
+    </div>
+
+    <div id="error-section" style="color: red; display: none;">
+        <h3>Error</h3>
+        <pre id="error"></pre>
+    </div>
+
+    <script>
+        // Simple check if user is authenticated
+        fetch('/auth/status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.authenticated) {
+                    document.getElementById('auth-section').style.display = 'none';
+                    document.getElementById('results-section').style.display = 'block';
+                    // Fetch compliance results
+                    return fetch('/compliance/status');
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('results').textContent = JSON.stringify(data, null, 2);
+            })
+            .catch(error => {
+                document.getElementById('error-section').style.display = 'block';
+                document.getElementById('error').textContent = error.message;
+            });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,14 @@
+supabase-compliance-checker/
+├── .env
+├── .gitignore
+├── src/
+│   ├── server.js
+│   ├── routes/
+│   │   ├── auth.js
+│   │   └── compliance.js
+│   ├── services/
+│   │   ├── supabaseAuth.js
+│   │   └── complianceChecks.js
+│   └── public/
+│       └── index.html
+└── package.json 
