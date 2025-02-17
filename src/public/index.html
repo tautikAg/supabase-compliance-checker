@@ -2,6 +2,20 @@
 <html>
 <head>
     <title>Supabase Compliance Checker</title>
+    <style>
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .error {
+            color: red;
+            background-color: #ffebee;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
     <h1>Supabase Compliance Checker</h1>
@@ -17,30 +31,66 @@
         <pre id="results"></pre>
     </div>
 
-    <div id="error-section" style="color: red; display: none;">
+    <div id="error-section" style="display: none;">
         <h3>Error</h3>
         <pre id="error"></pre>
     </div>
 
+    <div id="log-section">
+        <h3>Activity Log</h3>
+        <div id="log"></div>
+    </div>
+
     <script>
+        function addLog(message, isError = false) {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${isError ? 'error' : ''}`;
+            entry.textContent = `${new Date().toISOString()} - ${message}`;
+            logDiv.insertBefore(entry, logDiv.firstChild);
+        }
+
+        addLog('Application started');
+
         // Simple check if user is authenticated
         fetch('/auth/status')
-            .then(response => response.json())
+            .then(response => {
+                addLog(`Auth status check response: ${response.status}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
+                addLog(`Auth status: ${JSON.stringify(data)}`);
                 if (data.authenticated) {
                     document.getElementById('auth-section').style.display = 'none';
                     document.getElementById('results-section').style.display = 'block';
-                    // Fetch compliance results
+                    addLog('Fetching compliance status...');
                     return fetch('/compliance/status');
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (response) {
+                    addLog(`Compliance check response: ${response.status}`);
+                    if (!response.ok) {
+                        throw new Error(`Compliance check failed! status: ${response.status}`);
+                    }
+                    return response.json();
+                }
+            })
             .then(data => {
-                document.getElementById('results').textContent = JSON.stringify(data, null, 2);
+                if (data) {
+                    addLog('Received compliance data');
+                    document.getElementById('results').textContent = 
+                        JSON.stringify(data, null, 2);
+                }
             })
             .catch(error => {
+                addLog(`Error: ${error.message}`, true);
                 document.getElementById('error-section').style.display = 'block';
-                document.getElementById('error').textContent = error.message;
+                document.getElementById('error').textContent = 
+                    `${error.message}\n\nTimestamp: ${new Date().toISOString()}`;
             });
     </script>
 </body>

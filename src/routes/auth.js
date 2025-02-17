@@ -33,53 +33,69 @@ router.get('/login', (req, res) => {
 
 // Handle OAuth callback
 router.get('/callback', async (req, res) => {
-  const { code } = req.query;
-  const { codeVerifier } = req.session;
-
-  if (!code || !codeVerifier) {
-    return res.status(400).send('Missing required parameters');
-  }
-
-  try {
-    // Exchange code for tokens
-    const response = await fetch('https://api.supabase.com/v1/oauth/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${Buffer.from(
-          `${process.env.SUPABASE_CLIENT_ID}:${process.env.SUPABASE_CLIENT_SECRET}`
-        ).toString('base64')}`
-      },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: process.env.REDIRECT_URI,
-        code_verifier: codeVerifier
-      })
+    console.log('Callback received:', {
+        code: !!req.query.code,
+        hasVerifier: !!req.session?.codeVerifier
     });
 
-    const tokens = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(tokens.message || 'Failed to exchange code for tokens');
+    const { code } = req.query;
+    const { codeVerifier } = req.session || {};
+
+    if (!code || !codeVerifier) {
+        console.error('Missing parameters:', { code: !!code, codeVerifier: !!codeVerifier });
+        return res.status(400).send('Missing required parameters');
     }
 
-    // Store tokens in session
-    req.session.accessToken = tokens.access_token;
-    req.session.refreshToken = tokens.refresh_token;
+    try {
+        // Exchange code for tokens
+        const response = await fetch('https://api.supabase.com/v1/oauth/token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Authorization': `Basic ${Buffer.from(
+                    `${process.env.SUPABASE_CLIENT_ID}:${process.env.SUPABASE_CLIENT_SECRET}`
+                ).toString('base64')}`
+            },
+            body: new URLSearchParams({
+                grant_type: 'authorization_code',
+                code,
+                redirect_uri: process.env.REDIRECT_URI,
+                code_verifier: codeVerifier
+            })
+        });
 
-    res.redirect('/');
-  } catch (error) {
-    console.error('Auth error:', error);
-    res.status(500).send('Authentication failed');
-  }
+        const tokens = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(tokens.message || 'Failed to exchange code for tokens');
+        }
+
+        // Store tokens in session
+        req.session.accessToken = tokens.access_token;
+        req.session.refreshToken = tokens.refresh_token;
+
+        console.log('Token exchange successful');
+        res.redirect('/');
+    } catch (error) {
+        console.error('Auth callback error:', error);
+        res.status(500).send('Authentication failed');
+    }
 });
 
-// Add this route to your existing auth.js file
+// Modify the status route to include error handling
 router.get('/status', (req, res) => {
-    res.json({
-        authenticated: !!req.session.accessToken
-    });
+    try {
+        res.json({
+            authenticated: !!req.session?.accessToken,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Status check error:', error);
+        res.status(500).json({ 
+            authenticated: false, 
+            error: 'Failed to check authentication status' 
+        });
+    }
 });
 
 module.exports = router; 

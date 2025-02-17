@@ -11,8 +11,20 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(cookieSession({
   name: 'session',
   keys: [process.env.SESSION_SECRET || 'test'],
-  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  secure: false, // Set to true in production
+  httpOnly: true,
+  sameSite: 'lax'
 }));
+
+// Add request logging middleware
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    if (req.session) {
+        console.log('Session exists:', !!req.session.accessToken);
+    }
+    next();
+});
 
 // Add a root route handler for debugging
 app.get('/', (req, res) => {
